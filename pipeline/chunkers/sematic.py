@@ -26,6 +26,7 @@ class SemanticChunker:
         if self._model is None:
             try:
                 self._model = SentenceTransformer(self.model_name)
+                print(f"Load thành công model: {self.model_name}")
             except Exception as e:
                 print(f"Error loading model: {e}")
         return self._model
@@ -95,7 +96,6 @@ def demo_semantic_chunking():
         "Uống cà phê vào buổi sáng giúp tăng cường sự tỉnh táo và tập trung. "
         "Caffeine kích thích hệ thần kinh trung ương, giúp giảm mệt mỏi và cải thiện hiệu suất làm việc. "
         "Nhiều nghiên cứu cho thấy cà phê còn chứa chất chống oxy hóa bảo vệ gan. "
-        "---------------------------------------------------------- "
         "Thị trường chứng khoán là nơi diễn ra các hoạt động mua bán cổ phiếu của các công ty niêm yết. "
         "Nhà đầu tư kỳ vọng kiếm lợi nhuận thông qua chênh lệch giá hoặc cổ tức hàng năm. "
         "Chỉ số VN-Index phản ánh biến động vốn hóa của toàn bộ thị trường tại Việt Nam."
@@ -110,7 +110,7 @@ def demo_semantic_chunking():
     # 2. Khởi tạo Semantic Chunker
     # Ngưỡng 0.5 thường là điểm "ngọt" cho các model multilingual
     chunker = SemanticChunker(
-        chunk_size=500, 
+        chunk_size=500,
         similarity_threshold=0.5, 
         buffer_size=1
     )

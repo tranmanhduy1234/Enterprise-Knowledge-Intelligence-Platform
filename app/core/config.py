@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     chunk_overlap: int = 64
     top_k_retrieve: int = 20
     top_k_rerank: int = 5
+    model_sematic_chunking: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     
 settings = Settings()
 
