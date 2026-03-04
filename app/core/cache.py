@@ -11,7 +11,6 @@ class QueryCache:
         self._client: redis.Redis | None = None
     
     async def connect(self) -> None:
-        """Initialize Redis connection. Tolerates Redis being down"""
         try:
             self._client = redis.from_url(
                 settings.redis_url,
@@ -34,7 +33,6 @@ class QueryCache:
         return hashlib.sha256(raw.encode()).hexdigest()
     
     async def get(self, query: str, **kwargs: Any) -> dict | None:
-        """Retrieve cached response if exists"""
         if not self._client:
             return None
         key = f"ekip:query:{self._hash_query(query, **kwargs)}"

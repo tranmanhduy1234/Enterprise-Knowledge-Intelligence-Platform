@@ -103,54 +103,26 @@ async def get_ingest_status(task_id: str):
             "message": "Có lỗi xảy ra trong quá trình xử lý."
         }
 
-# @router.post("/query", response_model=QueryResponse)
-# async def query(req: QueryRequest):
-#     """RAG query with optional cache."""
-#     if req.use_cache:
-#         hit = await cache.get(req.query, top_k=req.top_k, use_rerank=True)
-#         if hit:
-#             return QueryResponse(**hit, cached=True)
-        
-#     answer, sources = await rag_query(
-#         query=req.query,
-#         use_rerank=True,
-#     )
-#     resp = QueryResponse(
-#         answer=answer,
-#         sources=[{"text": s["text"], "metadata": s["metadata"], "score": s["score"]} for s in sources],
-#         cached=False,
-#     )
-#     if req.use_cache:
-#         await cache.set(req.query, resp.model_dump(), top_k=req.top_k, use_rerank=True)
-#     return resp
-
 @router.post("/query", response_model=QueryResponse)
 async def query(req: QueryRequest):
-    # 1. Thử lấy dữ liệu từ Semantic Cache (nếu request cho phép)
     if req.use_cache:
         try:
-            # Chạy hàm đồng bộ trong threadpool để tránh block
             cached_data = await run_in_threadpool(semantic_cache.get, query=req.query)
             
             if cached_data:
-                # Trả về kết quả từ cache ngay lập tức
                 return QueryResponse(
                     answer=cached_data["answer"],
                     sources=cached_data["sources"],
                     cached=True
                 )
         except Exception as e:
-            # Log lỗi nhưng không làm sập ứng dụng, tiếp tục chạy RAG
             print(f"Cache lookup failed: {e}")
 
-    # 2. Nếu không có cache hoặc cache miss, thực hiện RAG query
-    # Lưu ý: Đảm bảo rag_query là hàm async thực thụ
     answer, sources = await rag_query(
         query=req.query,
         use_rerank=True,
     )
 
-    # Chuẩn bị dữ liệu trả về
     formatted_sources = [
         {"text": s["text"], "metadata": s["metadata"], "score": s.get("score", 0)} 
         for s in sources
@@ -162,10 +134,8 @@ async def query(req: QueryRequest):
         cached=False,
     )
 
-    # 3. Lưu kết quả mới vào Cache (Background Task)
     if req.use_cache:
         try:
-            # Sử dụng wait_for hoặc đẩy vào BackgroundTasks để không bắt user chờ
             await asyncio.wait_for(
                 run_in_threadpool(
                     semantic_cache.set, 
@@ -173,7 +143,7 @@ async def query(req: QueryRequest):
                     answer=answer, 
                     source=formatted_sources
                 ),
-                timeout=10.0 # Giảm timeout xuống, 120s là quá dài cho một tác vụ cache
+                timeout=10.0
             )
         except Exception as e:
             print(f"Failed to set cache: {e}")

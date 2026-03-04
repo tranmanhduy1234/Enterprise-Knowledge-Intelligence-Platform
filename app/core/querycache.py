@@ -16,7 +16,7 @@ class SemanticCache:
     def __init__(self) -> None:
         self._client = get_qdrant_client()
         self._collection_name = f"{settings.qdrant_collection}_cache"
-        self._threshold = 0.85  # Ngưỡng tương đồng để chấp nhận cache
+        self._threshold = 0.85  
         self._reranker = None
 
     def _get_reranker(self):
@@ -30,10 +30,8 @@ class SemanticCache:
             return None
 
         try:
-            # 1. Tạo embedding cho query
             hybrid_vector = embedding_service.embed_query(query)
             
-            # 2. Truy vấn Hybrid Search trên Qdrant
             response = self._client.query_points(
                 collection_name=self._collection_name,
                 prefetch=[

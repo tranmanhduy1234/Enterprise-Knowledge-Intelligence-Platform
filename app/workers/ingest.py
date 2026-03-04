@@ -68,9 +68,6 @@ def ingest_document(file_path: str, document_id: str | None = None) -> dict:
             points=points
         )
         total_points += len(points)
-        
-        # QUAN TRỌNG: Ép worker ngủ 0.5s giữa các mẻ để CPU/GPU context switch
-        # Nhường tài nguyên cho API /query của FastAPI xử lý
         time.sleep(0.5) 
 
     print(f"Ingest thành công: {path} (Tổng số: {total_points} chunks)")
