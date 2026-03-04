@@ -19,7 +19,8 @@ class EmbeddingService:
     @property
     def sparse_model(self) -> SparseTextEmbedding:
         if self._sparse_model is None:
-            self._sparse_model = SparseTextEmbedding(model_name=settings.sparse_embedding_model)
+            # Giới hạn số luồng để không nuốt trọn CPU
+            self._sparse_model = SparseTextEmbedding(model_name=settings.sparse_embedding_model, threads=2)
         
         return self._sparse_model
     
@@ -54,11 +55,10 @@ class EmbeddingService:
     
 embedding_service = EmbeddingService()
 
-import uuid
 from qdrant_client import QdrantClient, models
 # Giả sử các class và function trước đó đã được import hoặc định nghĩa ở trên
 # from your_module import embedding_service, ensure_collection, settings, get_qdrant_client
-from app.services.vectorstore import ensure_collection, delete_qdrant_collection
+from app.services.vectorstore import ensure_collection
 
 import hashlib
 def generate_id(content: str) -> str:

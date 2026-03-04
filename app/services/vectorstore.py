@@ -57,7 +57,6 @@ def ensure_cache_collection(client: QdrantClient, dim: int | None = None) -> Non
     )
     
 def ensure_collection(client: QdrantClient, dim: int | None = None) -> None:
-    ensure_cache_collection(client)
     collections = client.get_collections().collections
     names = [c.name for c in collections]
     
@@ -95,7 +94,3 @@ def ensure_collection(client: QdrantClient, dim: int | None = None) -> None:
         )
     )
     
-if __name__=="__main__":
-    client = get_qdrant_client()
-    delete_qdrant_collection(client=client, collection_name=settings.qdrant_collection)
-    ensure_collection(client)

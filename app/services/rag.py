@@ -1,12 +1,11 @@
 from app.core.config import settings
-from app.services.retriever import HybridRetriever
+from app.services.retriever import hybridRetriever
 from google import genai
 import private
 from fastapi.concurrency import run_in_threadpool
 
 _llm_local = None
 _llm_gemini = None
-retriever = HybridRetriever()
 
 def _get_llm():
     global _llm_local
@@ -101,7 +100,7 @@ async def rag_query(
     query: str,
     use_rerank: bool = True
 ) -> tuple[str, list[dict]]:
-    sources = await run_in_threadpool(retriever.search, query, use_rerank=use_rerank)
+    sources = await run_in_threadpool(hybridRetriever.search, query, use_rerank=use_rerank)
     context = build_context(sources)
     answer = await generate_answer_gemini(query, context)
     return answer, sources

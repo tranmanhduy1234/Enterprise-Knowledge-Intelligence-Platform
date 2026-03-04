@@ -16,16 +16,12 @@ from app.models.schemas import (
 )
 from celery.result import AsyncResult
 from app.services.rag import rag_query, build_context
-from app.services.retriever import HybridRetriever
+from app.services.retriever import hybridRetriever
 from app.workers.ingest import ingest_document
 from app.workers.celery_app import celery_app
-from app.services.vectorstore import get_qdrant_client, ensure_collection 
-
-client = get_qdrant_client()
-ensure_collection(client)
+from app.core.querycache import semantic_cache
 
 router = APIRouter(prefix="/api/v1", tags=["EKIP"])
-
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check for API, Qdrant, Redis."""
@@ -42,12 +38,13 @@ async def health_check():
         qdrant_ok = True
     except Exception:
         pass
+    
     try:
         if cache._client:
-            await cache.set("__health__", {"ok": 1}, ttl=5)
             redis_ok = True
     except Exception:
         pass
+    
     return HealthResponse(
         status="ok" if (qdrant_ok and redis_ok) else "degraded",
         qdrant=qdrant_ok,
@@ -106,50 +103,79 @@ async def get_ingest_status(task_id: str):
             "message": "Có lỗi xảy ra trong quá trình xử lý."
         }
 
+# @router.post("/query", response_model=QueryResponse)
+# async def query(req: QueryRequest):
+#     """RAG query with optional cache."""
+#     if req.use_cache:
+#         hit = await cache.get(req.query, top_k=req.top_k, use_rerank=True)
+#         if hit:
+#             return QueryResponse(**hit, cached=True)
+        
+#     answer, sources = await rag_query(
+#         query=req.query,
+#         use_rerank=True,
+#     )
+#     resp = QueryResponse(
+#         answer=answer,
+#         sources=[{"text": s["text"], "metadata": s["metadata"], "score": s["score"]} for s in sources],
+#         cached=False,
+#     )
+#     if req.use_cache:
+#         await cache.set(req.query, resp.model_dump(), top_k=req.top_k, use_rerank=True)
+#     return resp
+
 @router.post("/query", response_model=QueryResponse)
 async def query(req: QueryRequest):
-    """RAG query with optional cache."""
+    # 1. Thử lấy dữ liệu từ Semantic Cache (nếu request cho phép)
     if req.use_cache:
-        hit = await cache.get(req.query, top_k=req.top_k, use_rerank=True)
-        if hit:
-            return QueryResponse(**hit, cached=True)
-        
+        try:
+            # Chạy hàm đồng bộ trong threadpool để tránh block
+            cached_data = await run_in_threadpool(semantic_cache.get, query=req.query)
+            
+            if cached_data:
+                # Trả về kết quả từ cache ngay lập tức
+                return QueryResponse(
+                    answer=cached_data["answer"],
+                    sources=cached_data["sources"],
+                    cached=True
+                )
+        except Exception as e:
+            # Log lỗi nhưng không làm sập ứng dụng, tiếp tục chạy RAG
+            print(f"Cache lookup failed: {e}")
+
+    # 2. Nếu không có cache hoặc cache miss, thực hiện RAG query
+    # Lưu ý: Đảm bảo rag_query là hàm async thực thụ
     answer, sources = await rag_query(
         query=req.query,
         use_rerank=True,
     )
+
+    # Chuẩn bị dữ liệu trả về
+    formatted_sources = [
+        {"text": s["text"], "metadata": s["metadata"], "score": s.get("score", 0)} 
+        for s in sources
+    ]
+    
     resp = QueryResponse(
         answer=answer,
-        sources=[{"text": s["text"], "metadata": s["metadata"], "score": s["score"]} for s in sources],
+        sources=formatted_sources,
         cached=False,
     )
+
+    # 3. Lưu kết quả mới vào Cache (Background Task)
     if req.use_cache:
-        await cache.set(req.query, resp.model_dump(), top_k=req.top_k, use_rerank=True)
+        try:
+            # Sử dụng wait_for hoặc đẩy vào BackgroundTasks để không bắt user chờ
+            await asyncio.wait_for(
+                run_in_threadpool(
+                    semantic_cache.set, 
+                    query=req.query, 
+                    answer=answer, 
+                    source=formatted_sources
+                ),
+                timeout=10.0 # Giảm timeout xuống, 120s là quá dài cho một tác vụ cache
+            )
+        except Exception as e:
+            print(f"Failed to set cache: {e}")
+
     return resp
-
-@router.post("/query/stream")
-async def query_stream(req: QueryRequest):
-    """RAG query with SSE streaming response."""
-    if req.use_cache:
-        hit = await cache.get(req.query, top_k=req.top_k, use_rerank=True)
-        if hit:
-            async def cached_stream():
-                yield {"event": "answer", "data": json.dumps({"text": hit["answer"], "done": True})}
-                yield {"event": "sources", "data": json.dumps(hit["sources"])}
-            return EventSourceResponse(cached_stream())
-
-    retriever = HybridRetriever()
-    sources = retriever.search(req.query, top_k=req.top_k, use_rerank=True)
-    context = build_context(sources)
-
-    async def event_stream():
-        # Send sources first
-        yield {"event": "sources", "data": json.dumps(sources)}
-        # Placeholder: real streaming would yield LLM tokens
-        answer, _ = await rag_query(req.query, top_k=req.top_k)
-        for i in range(0, len(answer), 50):
-            chunk = answer[i : i + 50]
-            yield {"event": "answer", "data": json.dumps({"text": chunk, "done": False})}
-        yield {"event": "answer", "data": json.dumps({"text": "", "done": True})}
-
-    return EventSourceResponse(event_stream())

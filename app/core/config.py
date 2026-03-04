@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-m3"
     
     # RAG
-    chunk_size: int = 512
-    chunk_overlap: int = 64
+    chunk_size: int = 1024
+    chunk_overlap: int = 124
     top_k_retrieve: int = 20
     top_k_rerank: int = 5
     model_sematic_chunking: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"

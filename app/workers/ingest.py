@@ -31,44 +31,51 @@ def ingest_document(file_path: str, document_id: str | None = None) -> dict:
     if not all_chunks:
         return {"document_id": doc_id, "chunks_created": 0, "status": "empty"}
 
-    texts = [c.content for c in all_chunks]
-    hybrid_vector = embedding_service.embed_hybrid(texts)
-    dim = len(hybrid_vector[0]["dense"])
+    import time
     
     client = get_qdrant_client()
-    ensure_collection(client, dim=dim)
-    
-    points = []
-    for i, (chunk, vec) in enumerate(zip(all_chunks, hybrid_vector)):
-        meta = chunk.metadata.copy()
-        meta["document_id"] = doc_id
-        meta["chunk_id"] = i
-        meta["text"] = chunk.content
-        if chunk.page:
-            meta["page"] = chunk.page
+    BATCH_SIZE = 32
+    total_points = 0
+    dim = None
+
+    # Quét từng mẻ (batch)
+    for i in range(0, len(all_chunks), BATCH_SIZE):
+        batch_chunks = all_chunks[i:i + BATCH_SIZE]
+        texts = [c.content for c in batch_chunks]
         
-        points.append(
-            models.PointStruct(
-                id=str(uuid.uuid4()),
-                vector=vec,
-                payload=meta
+        # Xử lý vector từng mẻ nhỏ
+        hybrid_vector = embedding_service.embed_hybrid(texts)
+        
+        if dim is None:
+            dim = len(hybrid_vector[0]["dense"])
+            ensure_collection(client, dim=dim)
+            
+        points = []
+        for j, (chunk, vec) in enumerate(zip(batch_chunks, hybrid_vector)):
+            meta = chunk.metadata.copy()
+            meta["document_id"] = doc_id
+            meta["chunk_id"] = i + j
+            meta["text"] = chunk.content
+            if chunk.page:
+                meta["page"] = chunk.page
+            
+            points.append(
+                models.PointStruct(id=str(uuid.uuid4()), vector=vec, payload=meta)
             )
+            
+        client.upsert(
+            collection_name=settings.qdrant_collection,
+            points=points
         )
-    client.upsert(
-        collection_name=settings.qdrant_collection,
-        points=points
-    )
-    print(f"Ingest thành công: {path}")
+        total_points += len(points)
+        
+        # QUAN TRỌNG: Ép worker ngủ 0.5s giữa các mẻ để CPU/GPU context switch
+        # Nhường tài nguyên cho API /query của FastAPI xử lý
+        time.sleep(0.5) 
+
+    print(f"Ingest thành công: {path} (Tổng số: {total_points} chunks)")
     return {
         "document_id": doc_id,
-        "chunks_created": len(points),
+        "chunks_created": total_points,
         "status": "success",
     }
-    
-if __name__=="__main__":
-    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\AI-engineer.pdf", document_id=1)
-    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\chatbot.docx", document_id=3)
-    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\dlbookvn_chap01.pdf", document_id=4)
-    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\README.md", document_id=5)
-    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\AI-engineer.pdf", document_id=6)
-    pass

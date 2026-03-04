@@ -7,11 +7,9 @@ import redis.asyncio as redis
 from app.core.config import settings
 
 class QueryCache:
-    """Async Redis cache for RAG query results"""
-    
     def __init__(self) -> None:
         self._client: redis.Redis | None = None
-
+    
     async def connect(self) -> None:
         """Initialize Redis connection. Tolerates Redis being down"""
         try:
@@ -22,7 +20,7 @@ class QueryCache:
             )
         except Exception:
             self._client = None
-            
+
     async def disconnect(self) -> None:
         """Close Redis connection"""
         if self._client:

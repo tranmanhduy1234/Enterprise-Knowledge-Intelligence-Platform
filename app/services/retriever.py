@@ -8,10 +8,6 @@ from app.services.embedding import embedding_service
 from app.services.vectorstore import get_qdrant_client
 
 class HybridRetriever:
-    """
-    dense Vector search + BGE-Reranker.
-    """
-    
     def __init__(self) -> None:
         self._qdrant: QdrantClient | None = None
         self._reranker: Any = None
@@ -123,6 +119,6 @@ class HybridRetriever:
                 })
         return final_results
 
+hybridRetriever = HybridRetriever()
 if __name__=="__main__":
-    hybridRetriever = HybridRetriever()
     hybridRetriever.search("Redis thường dùng để làm gì")
