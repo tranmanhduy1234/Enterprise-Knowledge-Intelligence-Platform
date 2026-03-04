@@ -9,9 +9,9 @@ class IngestRequest(BaseModel):
     
 class IngestResponse(BaseModel):
     """Response after document ingestion"""
-    
     document_id: str
-    chunks_created: int
+    task_id: str
+    message: str
     status: str = "success"
     
 """QueryRequest & QueryResponse (Quy trình truy vấn RAG)"""

@@ -121,12 +121,12 @@ def run_demo():
         for i in range(len(documents))
     ]
     
-    client.upsert(collection_name=settings.qdrant_collection, points=points)
+    # client.upsert(collection_name=settings.qdrant_collection, points=points)
     print("--- Đã đẩy dữ liệu vào Qdrant thành công ---")
 
     # 5. Thực hiện Hybrid Search (The Retriever)
     # Case 1: Tìm kiếm theo từ khóa chính xác (Lợi thế của Sparse)
-    query_1 = "AI chuyên sâu" 
+    query_1 = "Trần Đỗ Mạnh Duy" 
     
     # Case 2: Tìm kiếm theo ý nghĩa (Lợi thế của Dense)
     query_2 = "Cơ sở dữ liệu vector nào tốt cho tìm kiếm kết hợp?"
@@ -156,7 +156,7 @@ def run_demo():
         ).points
 
         for idx, hit in enumerate(results):
-            print(f"  Top {idx+1}: {hit.payload['content']} (Score RRF: {hit.score:.4f})")
+            print(f"  Top {idx+1}: {hit.payload} (Score RRF: {hit.score:.4f})")
 
 if __name__ == "__main__":
     run_demo()

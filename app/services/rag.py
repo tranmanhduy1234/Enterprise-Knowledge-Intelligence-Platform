@@ -2,6 +2,7 @@ from app.core.config import settings
 from app.services.retriever import HybridRetriever
 from google import genai
 import private
+from fastapi.concurrency import run_in_threadpool
 
 _llm_local = None
 _llm_gemini = None
@@ -34,7 +35,7 @@ def _get_llm_gemini():
 def build_context(sources: list[dict]) -> str:
     parts = []
     for i, s in enumerate(sources, 1):
-        text = s.get("content", "").strip()
+        text = s.get("text", "").strip()
         meta = s.get("metadata", {})
         source = meta.get("source", "unknown")
         parts.append(f"Tài liệu [{i}] (Nguồn: {source})\n{text}")
@@ -88,18 +89,19 @@ async def generate_answer_gemini(query: str, context: str) -> str:
             config={
                 "system_instruction": system_instruction,
                 "temperature": 0.2, # Giảm xuống 0.2 cho RAG để AI bám sát fact, ít "phiêu"
-                "max_output_tokens": 512,
+                "max_output_tokens": 1024,
             }
         )
     except Exception as e:
-        print(e)
+        print(f"Lỗi gọi Gemini: {e}")
+        return "Xin lỗi, tôi gặp sự cố kỹ thuật khi kết nối với bộ não AI."
     return response.text
 
 async def rag_query(
     query: str,
     use_rerank: bool = True
 ) -> tuple[str, list[dict]]:
-    sources = retriever.search(query, use_rerank=use_rerank)
+    sources = await run_in_threadpool(retriever.search, query, use_rerank=use_rerank)
     context = build_context(sources)
     answer = await generate_answer_gemini(query, context)
     return answer, sources

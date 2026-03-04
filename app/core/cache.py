@@ -66,6 +66,7 @@ class QueryCache:
             return
         key = f"ekip:query:{self._hash_query(query, **kwargs)}"
         await self._client.delete(key)
+        
     async def ping(self) -> None:
         if not self._client:
             return

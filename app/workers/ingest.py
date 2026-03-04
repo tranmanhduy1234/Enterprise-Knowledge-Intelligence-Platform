@@ -29,7 +29,7 @@ def ingest_document(file_path: str, document_id: str | None = None) -> dict:
         all_chunks.extend(chunker.chunk(rc))
 
     if not all_chunks:
-        return {"document_id": doc_id, "chunk_created": 0, "status": "empty"}
+        return {"document_id": doc_id, "chunks_created": 0, "status": "empty"}
 
     texts = [c.content for c in all_chunks]
     hybrid_vector = embedding_service.embed_hybrid(texts)
@@ -64,5 +64,11 @@ def ingest_document(file_path: str, document_id: str | None = None) -> dict:
         "chunks_created": len(points),
         "status": "success",
     }
+    
 if __name__=="__main__":
-    ingest_document("D:\chuyen_nganh\myEKIP\data\AI-engineer.pdf")
+    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\AI-engineer.pdf", document_id=1)
+    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\chatbot.docx", document_id=3)
+    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\dlbookvn_chap01.pdf", document_id=4)
+    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\README.md", document_id=5)
+    # ingest_document(file_path="D:\chuyen_nganh\myEKIP\data\AI-engineer.pdf", document_id=6)
+    pass

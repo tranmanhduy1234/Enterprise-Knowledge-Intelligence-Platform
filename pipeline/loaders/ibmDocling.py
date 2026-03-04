@@ -47,7 +47,7 @@ class DoclingLoader(BaseLoader):
 
 if __name__ == "__main__":
     loader = DoclingLoader()
-    file_path = Path(r"D:\chuyen_nganh\myEKIP\data\DANHSACHCHUADONGTIEN.xlsx")
+    file_path = Path(r"D:\chuyen_nganh\myEKIP\data\ban-hieu-chinh-ke-hoach-dao-tao-nam-hoc-2012-2013.html")
     if loader.supports(file_path):
         final_chunks = loader.load(file_path)
         print(f"Tổng số lượng chunk: {len(final_chunks)}")

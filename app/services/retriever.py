@@ -5,7 +5,7 @@ from sentence_transformers import CrossEncoder
 
 from app.core.config import settings
 from app.services.embedding import embedding_service
-from app.services.vectorstore import get_qdrant_client, ensure_collection
+from app.services.vectorstore import get_qdrant_client
 
 class HybridRetriever:
     """
@@ -29,7 +29,22 @@ class HybridRetriever:
             )
         return self._reranker
     
-    def search(self, query: str, top_k_rerank: int = 5, top_k_retrieve: int = 20, use_rerank: bool = True) -> list[dict]:
+    def delete(self, metadata: dict = {}):
+        self.qdrant.delete(
+            collection_name=settings.qdrant_collection,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="metadata.source",
+                            match=models.MatchValue(value="value")
+                        )
+                    ]
+                )
+            )
+        )
+    
+    def search(self, query: str, top_k_rerank: int = 5, top_k_retrieve: int = 20, use_rerank: bool = True, search_cache=False) -> list[dict]:
         top_k_retrieve = top_k_retrieve or settings.top_k_retrieve
         top_k_rerank = top_k_rerank or settings.top_k_rerank
         
@@ -49,7 +64,7 @@ class HybridRetriever:
         """
         # prefetch cho phép chạy song song luồng tìm kiếm và gộp kết quả bằng RRF
         response = self.qdrant.query_points(
-            collection_name=settings.qdrant_collection,
+            collection_name=settings.qdrant_collection if search_cache == False else settings.qdrant_collection + "_cache",
             prefetch=[
                 models.Prefetch(
                     query=hybridEmbedVector["dense"],
@@ -75,12 +90,12 @@ class HybridRetriever:
         final_results = []
         candidate_points = [
             p for p in candidate_points
-            if p.payload and "content" in p.payload
+            if p.payload
         ]
         
         if use_rerank and candidate_points:
             reranker = self._get_reranker()
-            pairs = [[query, p.payload.get("content", "")] for p in candidate_points]
+            pairs = [[query, p.payload.get("text", "")] for p in candidate_points]
             if pairs:
                 rerank_scores = reranker.predict(pairs)
                 
@@ -93,8 +108,8 @@ class HybridRetriever:
                 for p, s in scored[:top_k_rerank]:
                     final_results.append({
                         "id": str(p.id),
-                        "content": p.payload.get("content", ""),
-                        "metadata": {k: v for k, v in p.payload.items() if k != "content"},
+                        "text": p.payload.get("text", ""),
+                        "metadata": {k: v for k, v in p.payload.items() if k != "text"},
                         "score": float(s)
                     })
         if not final_results:
@@ -102,12 +117,12 @@ class HybridRetriever:
             for p in candidate_points[:top_k_rerank]:
                 final_results.append({
                     "id": str(p.id),
-                    "content": p.payload.get("content", ""),
-                    "metadata": {k: v for k, v in p.payload.items() if k != "content"},
+                    "text": p.payload.get("text", ""),
+                    "metadata": {k: v for k, v in p.payload.items() if k != "text"},
                     "score": getattr(p, "score", 0.0)
                 })
         return final_results
 
 if __name__=="__main__":
     hybridRetriever = HybridRetriever()
-    hybridRetriever.search("Vector database")
+    hybridRetriever.search("Redis thường dùng để làm gì")
