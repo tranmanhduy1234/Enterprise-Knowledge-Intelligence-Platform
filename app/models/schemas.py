@@ -58,8 +58,3 @@ if __name__=="__main__":
     @app.get("/health", response_model=HealthResponse)
     async def health_check():
         return HealthResponse(status="ok", qdrant=True, redis=True)
-    
-    # RUN
-    import uvicorn
-    print("Truy cập http://127.0.0.1:8000/docs để thử nghiệm trực tiếp!")
-    uvicorn.run(app, host="127.0.0.1", port=8000)

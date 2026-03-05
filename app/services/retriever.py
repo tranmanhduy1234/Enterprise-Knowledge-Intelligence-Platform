@@ -109,7 +109,6 @@ class HybridRetriever:
                         "score": float(s)
                     })
         if not final_results:
-            # Nếu không rerank, trả về kết quả từ Qdrant (RRF score)
             for p in candidate_points[:top_k_rerank]:
                 final_results.append({
                     "id": str(p.id),

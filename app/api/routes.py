@@ -53,7 +53,6 @@ async def health_check():
 
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest(file: UploadFile = File(...), document_id: str | None = Form(None)):
-    """Upload document for ingestion (async via Celery worker)."""
     ext = Path(file.filename or "").suffix.lower()
     if ext not in (".pdf", ".docx", ".doc", ".md", ".markdown"):
         raise HTTPException(400, "Unsupported format. Use: pdf, docx, md")

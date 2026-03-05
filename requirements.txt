@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+qdrant-client
+sentence-transformers
+fastembed
+celery
+redis
+docling
+google-genai
+langchain-text-splitters
+python-multipart

@@ -87,7 +87,7 @@ async def generate_answer_gemini(query: str, context: str) -> str:
             contents=prompt,
             config={
                 "system_instruction": system_instruction,
-                "temperature": 0.2, # Giảm xuống 0.2 cho RAG để AI bám sát fact, ít "phiêu"
+                "temperature": 0.2,
                 "max_output_tokens": 1024,
             }
         )

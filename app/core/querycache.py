@@ -59,7 +59,7 @@ class SemanticCache:
 
             best_point = response.points[0]
             
-            if best_point.score < 0.5: # Lưu ý: RRF score khác với Cosine Similarity
+            if best_point.score < 0.5:
                 return None
 
             return {
@@ -82,7 +82,6 @@ class SemanticCache:
             
             hybrid_embed = embedding_service.embed_query(query=query_str)
             
-            # Đảm bảo collection đã tồn tại
             ensure_cache_collection(client=self._client, dim=len(hybrid_embed["dense"]))
 
             self._client.upsert(

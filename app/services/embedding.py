@@ -56,8 +56,6 @@ class EmbeddingService:
 embedding_service = EmbeddingService()
 
 from qdrant_client import QdrantClient, models
-# Giả sử các class và function trước đó đã được import hoặc định nghĩa ở trên
-# from your_module import embedding_service, ensure_collection, settings, get_qdrant_client
 from app.services.vectorstore import ensure_collection
 
 import hashlib
@@ -65,16 +63,11 @@ def generate_id(content: str) -> str:
     return hashlib.md5(content.encode("utf-8")).hexdigest()
 
 def run_demo():
-    # 1. Kết nối Qdrant
     client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
     
-    # 2. Khởi tạo Collection (tự động lấy dimension từ model)
-    # delete_qdrant_collection(client=client, collection_name=settings.qdrant_collection)
     print("--- Khởi tạo Collection ---")
     ensure_collection(client=client)
     
-    # 3. Chuẩn bị dữ liệu mẫu (Tiếng Việt)
-    # Lưu ý: Các câu này được thiết kế để test sự khác biệt giữa Dense và Sparse
     documents = [
         "Qdrant là một vector database mạnh mẽ hỗ trợ tìm kiếm hybrid.",
         "Hướng dẫn cài đặt Python và các thư viện AI chuyên sâu.",
@@ -111,33 +104,26 @@ def run_demo():
     print(f"--- Đang tạo vector cho {len(documents)} văn bản ---")
     hybrid_vectors = embedding_service.embed_hybrid(documents) 
 
-    # 4. Upsert vào Qdrant
     points = [
         models.PointStruct(
-            id=generate_id(content=documents[i]), # Hoặc dùng số nguyên
+            id=generate_id(content=documents[i]),
             vector=hybrid_vectors[i],
             payload={"content": documents[i], "metadata": {"source": "demo"}}
         )
         for i in range(len(documents))
     ]
     
-    # client.upsert(collection_name=settings.qdrant_collection, points=points)
     print("--- Đã đẩy dữ liệu vào Qdrant thành công ---")
 
-    # 5. Thực hiện Hybrid Search (The Retriever)
-    # Case 1: Tìm kiếm theo từ khóa chính xác (Lợi thế của Sparse)
     query_1 = "Trần Đỗ Mạnh Duy" 
     
-    # Case 2: Tìm kiếm theo ý nghĩa (Lợi thế của Dense)
     query_2 = "Cơ sở dữ liệu vector nào tốt cho tìm kiếm kết hợp?"
 
     for q in [query_1, query_2]:
         print(f"\nTruy vấn: '{q}'")
         
-        # Chuyển đổi query sang vector
         q_vec = embedding_service.embed_query(q)
         
-        # Thực hiện tìm kiếm RRF
         results = client.query_points(
             collection_name=settings.qdrant_collection,
             prefetch=[

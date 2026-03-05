@@ -17,3 +17,34 @@ services:
     volumes:
       - ./redis_data:/data
     restart: always
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ekip_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./Uploads:/app/Uploads
+    env_file:
+      - .env
+    depends_on:
+      - qdrant
+      - redis
+    restart: always
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ekip_worker
+    command: celery -A app.workers.celery_app worker --loglevel=info -P solo
+    volumes:
+      - ./Uploads:/app/Uploads
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - qdrant
+    restart: always
