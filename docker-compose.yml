@@ -48,3 +48,16 @@ services:
       - redis
       - qdrant
     restart: always
+
+  userinterface:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: user_interface
+    command: 
+    depends_on:
+      - redis
+      - qdrant
+      - api
+      - worker
+    restart: always

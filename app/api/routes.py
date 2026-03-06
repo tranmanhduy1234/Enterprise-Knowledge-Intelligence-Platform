@@ -15,16 +15,16 @@ from app.models.schemas import (
     HealthResponse,
 )
 from celery.result import AsyncResult
-from app.services.rag import rag_query, build_context
-from app.services.retriever import hybridRetriever
+from app.services.rag import rag_query
 from app.workers.ingest import ingest_document
 from app.workers.celery_app import celery_app
-from app.core.querycache import semantic_cache
+from app.services.vectorstore import get_qdrant_client, ensure_collection
+client = get_qdrant_client()
+ensure_collection(client=client)
 
 router = APIRouter(prefix="/api/v1", tags=["EKIP"])
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check for API, Qdrant, Redis."""
     qdrant_ok = False
     redis_ok = False
     
@@ -104,19 +104,6 @@ async def get_ingest_status(task_id: str):
 
 @router.post("/query", response_model=QueryResponse)
 async def query(req: QueryRequest):
-    if req.use_cache:
-        try:
-            cached_data = await run_in_threadpool(semantic_cache.get, query=req.query)
-            
-            if cached_data:
-                return QueryResponse(
-                    answer=cached_data["answer"],
-                    sources=cached_data["sources"],
-                    cached=True
-                )
-        except Exception as e:
-            print(f"Cache lookup failed: {e}")
-
     answer, sources = await rag_query(
         query=req.query,
         use_rerank=True,
@@ -132,19 +119,4 @@ async def query(req: QueryRequest):
         sources=formatted_sources,
         cached=False,
     )
-
-    if req.use_cache:
-        try:
-            await asyncio.wait_for(
-                run_in_threadpool(
-                    semantic_cache.set, 
-                    query=req.query, 
-                    answer=answer, 
-                    source=formatted_sources
-                ),
-                timeout=10.0
-            )
-        except Exception as e:
-            print(f"Failed to set cache: {e}")
-
     return resp
