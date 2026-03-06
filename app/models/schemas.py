@@ -1,9 +1,7 @@
 from pydantic import BaseModel, Field
 
-"""IngestRequest & IngestResponse (Quy trình nạp dữ liệu)"""
 class IngestRequest(BaseModel):
     """Request for documemt ingestion"""
-    
     document_id: str = Field(..., min_length=1, max_length=256)
     metadata: dict[str, str] = Field(default_factory=dict)
     

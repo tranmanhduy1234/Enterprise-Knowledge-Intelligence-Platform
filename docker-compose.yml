@@ -7,6 +7,8 @@ services:
       - "6334:6334"
     volumes:
       - ./qdrant_data:/qdrant/storage
+    networks:
+      - ekip_net
     restart: always
 
   redis:
@@ -16,6 +18,8 @@ services:
       - "6379:6379"
     volumes:
       - ./redis_data:/data
+    networks:
+      - ekip_net
     restart: always
 
   api:
@@ -23,15 +27,21 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: ekip_api
+    command: python run.py
     ports:
       - "8000:8000"
     volumes:
-      - ./Uploads:/app/Uploads
+      - ./uploads:/appplication/uploads
     env_file:
       - .env
+    environment:
+      - REDIS_HOST=redis_server
+      - QDRANT_HOST=qdrant_server
     depends_on:
       - qdrant
       - redis
+    networks:
+      - ekip_net
     restart: always
 
   worker:
@@ -41,23 +51,32 @@ services:
     container_name: ekip_worker
     command: celery -A app.workers.celery_app worker --loglevel=info -P solo
     volumes:
-      - ./Uploads:/app/Uploads
+      - ./uploads:/appplication/uploads
     env_file:
       - .env
+    environment:
+      - REDIS_HOST=redis_server
+      - QDRANT_HOST=qdrant_server
     depends_on:
       - redis
       - qdrant
+    networks:
+      - ekip_net
     restart: always
 
   userinterface:
-    build: 
-      context: .
+    build:
+      context: ./UI
       dockerfile: Dockerfile
-    container_name: user_interface
-    command: 
+    container_name: ekip_ui
+    ports:
+      - "80:80"
     depends_on:
-      - redis
-      - qdrant
       - api
-      - worker
+    networks:
+      - ekip_net
     restart: always
+
+networks:
+  ekip_net:
+    driver: bridge

@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     
     # RAG
     chunk_size: int = 1024
-    chunk_overlap: int = 124
+    chunk_overlap: int = 128
     top_k_retrieve: int = 20
     top_k_rerank: int = 5
     model_sematic_chunking: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"

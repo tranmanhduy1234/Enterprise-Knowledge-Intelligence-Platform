@@ -57,7 +57,7 @@ async def ingest(file: UploadFile = File(...), document_id: str | None = Form(No
     if ext not in (".pdf", ".docx", ".doc", ".md", ".markdown"):
         raise HTTPException(400, "Unsupported format. Use: pdf, docx, md")
 
-    tmp = Path("uploads")
+    tmp = Path("/appplication/uploads")
     tmp.mkdir(exist_ok=True)
     path = tmp / f"{uuid.uuid4()}{ext}"
     content = await file.read()
